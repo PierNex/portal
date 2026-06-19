@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — Invoice Portal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap');
+:root{
+  --bg:#f2f4f7;--white:#fff;--surface:#f7f8fa;--border:#e3e7ed;
+  --text:#111827;--muted:#6b7280;--light:#9ca3af;
+  --accent:#3db356;--accent-dark:#267a38;--accent-bg:#f0faf3;
+  --paid:#16a34a;--paid-bg:#dcfce7;--paid-text:#14532d;
+  --pending:#ca8a04;--pending-bg:#fef9c3;--pending-text:#713f12;
+  --open:#0284c7;--open-bg:#e0f2fe;--open-text:#0c4a6e;
+  --rejected:#dc2626;--rejected-bg:#fee2e2;--rejected-text:#7f1d1d;
+  --procore:#7c3aed;--procore-bg:#f5f3ff;--procore-text:#4c1d95;
+  --overdue:#dc2626;--header-h:58px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-height:100vh;}
+
+/* HEADER */
+header{height:var(--header-h);background:var(--white);border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.05);display:flex;align-items:center;padding:0 28px;gap:16px;position:sticky;top:0;z-index:100;}
+.logo-img{height:32px;width:auto;flex-shrink:0;}
+.hdr-div{width:1px;height:22px;background:var(--border);flex-shrink:0;}
+.hdr-title{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.03em;}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.updated-lbl{font-size:11px;color:var(--light);}
+.updated-lbl b{color:var(--muted);}
+#admin-key-area{display:flex;align-items:center;gap:6px;}
+#admin-key-input{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:11px;color:var(--text);width:110px;outline:none;font-family:'Inter',sans-serif;transition:border-color .2s;}
+#admin-key-input:focus{border-color:var(--accent);}
+#admin-key-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;}
+#admin-key-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* ADMIN BAR */
+#admin-bar{background:#f0fdf4;border-bottom:1px solid #bbf7d0;padding:0 28px;display:none;align-items:center;}
+#admin-bar.active{display:flex;}
+.admin-inner{display:flex;align-items:center;gap:14px;padding:10px 0;flex-wrap:wrap;}
+.admin-lbl{font-size:11px;color:var(--paid-text);font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.upload-btn-label{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;background:var(--accent);color:#fff;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:background .15s;}
+.upload-btn-label:hover{background:var(--accent-dark);}
+#csv-upload{display:none;}
+#upload-status{font-size:12px;color:var(--muted);}
+#upload-status.ok{color:var(--paid);font-weight:600;}
+#upload-status.err{color:var(--rejected);font-weight:600;}
+.upload-hint{font-size:11px;color:var(--muted);}
+
+/* SEARCH BAR */
+.search-bar{background:var(--white);border-bottom:2px solid var(--border);padding:16px 28px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.sb-field{display:flex;flex-direction:column;gap:5px;position:relative;}
+.sb-field.f-vendor{flex:2;min-width:220px;}
+.sb-field.f-invoice{flex:1;min-width:150px;}
+
+.sb-lbl{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-dark);}
+.sb-iw{position:relative;}
+.sb-icon{position:absolute;left:12px;bottom:11px;color:var(--accent);pointer-events:none;}
+.sb-input{width:100%;padding:11px 12px 11px 36px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:var(--white);border:2px solid var(--border);border-radius:9px;outline:none;transition:border-color .2s,box-shadow .2s;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.sb-input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(61,179,86,.15),0 1px 3px rgba(0,0,0,.06);}
+.sb-input::placeholder{color:var(--light);}
+
+.sb-clear{background:var(--white);border:2px solid var(--border);border-radius:9px;padding:11px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .15s;align-self:flex-end;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.sb-clear:hover{border-color:var(--rejected);color:var(--rejected);}
+
+/* Typeahead dropdowns */
+.vdrop,.idrop{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--white);border:1.5px solid var(--border);border-radius:9px;box-shadow:0 6px 22px rgba(0,0,0,.1);max-height:240px;overflow-y:auto;z-index:60;display:none;}
+.vdrop.open,.idrop.open{display:block;}
+.vdrop-item,.idrop-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+.vdrop-item:last-child,.idrop-item:last-child{border-bottom:none;}
+.vdrop-item:hover,.idrop-item:hover{background:var(--accent-bg);}
+.vdrop-item{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.vdi-name{font-size:13px;font-weight:500;color:var(--text);flex:1;}
+.vdi-badges{display:flex;gap:5px;flex-shrink:0;}
+.mini-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.idrop-inv{font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:var(--text);}
+.idrop-vendor{font-size:12px;color:var(--accent-dark);font-weight:600;margin-top:2px;}
+.idrop-memo{font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.idrop-meta{display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap;}
+
+/* STATUS STRIP */
+.status-strip{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;overflow-x:auto;}
+.ss-tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;font-family:'Inter',sans-serif;white-space:nowrap;border-bottom:3px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px;}
+.ss-tab:hover{color:var(--text);}
+.ss-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent);}
+.ss-count{font-size:10px;font-weight:700;background:var(--surface);color:var(--muted);padding:1px 6px;border-radius:20px;}
+.ss-tab.active .ss-count{background:var(--accent-bg);color:var(--accent-dark);}
+.ss-sep{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0;align-self:center;}
+.due-tab.active.is-over{color:var(--overdue);border-bottom-color:var(--overdue);}
+.due-tab.active.is-over .ss-count{background:#fee2e2;color:var(--overdue);}
+.due-tab.active.is-week{color:#b45309;border-bottom-color:#d97706;}
+.due-tab.active.is-week .ss-count{background:#fef3c7;color:#92400e;}
+.due-tab.active.is-30{color:var(--open);border-bottom-color:var(--open);}
+.due-tab.active.is-30 .ss-count{background:var(--open-bg);color:var(--open-text);}
+
+/* PAGE LAYOUT */
+.page{display:flex;min-height:calc(100vh - var(--header-h));}
+
+.a-select{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:12px;color:var(--text);outline:none;cursor:pointer;font-family:'Inter',sans-serif;transition:border-color .2s;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239ca3af' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;}
+.a-select:focus{border-color:var(--accent);}
+.due-btn{width:100%;text-align:left;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;cursor:pointer;background:var(--white);font-family:'Inter',sans-serif;transition:all .15s;margin-bottom:6px;}
+.due-btn:hover{box-shadow:0 2px 6px rgba(0,0,0,.07);}
+.due-btn.active{outline:2px solid var(--accent);outline-offset:0;}
+.due-btn-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.due-btn-lbl{font-size:11px;font-weight:700;}
+.due-btn-cnt{font-size:10px;font-weight:700;border-radius:20px;padding:1px 7px;}
+.due-btn-amt{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--text);line-height:1;}
+.dba{border-color:#f5c6b8;background:#fff2ed;}.dba .due-btn-lbl{color:var(--overdue);}.dba .due-btn-cnt{background:rgba(220,38,38,.1);color:var(--overdue);}
+.dbw{border-color:#fcd34d;background:#fffbeb;}.dbw .due-btn-lbl{color:#b45309;}.dbw .due-btn-cnt{background:rgba(180,83,9,.1);color:#b45309;}
+.db3{border-color:#93c5fd;background:#eff6ff;}.db3 .due-btn-lbl{color:#1d4ed8;}.db3 .due-btn-cnt{background:rgba(29,78,216,.1);color:#1d4ed8;}
+.due-btn.b-all{padding:8px 12px;}.due-btn.b-all .due-btn-lbl{color:var(--muted);font-size:12px;}
+.due-btn.b-all.active{background:var(--accent-bg);border-color:var(--accent);}.due-btn.b-all.active .due-btn-lbl{color:var(--accent-dark);}
+
+/* MAIN */
+.main{flex:1;padding:20px 22px;min-width:0;overflow:hidden;}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;}
+.kpi{background:var(--white);border:1.5px solid var(--border);border-radius:11px;padding:14px 16px;position:relative;overflow:hidden;cursor:pointer;transition:box-shadow .15s;}
+.kpi:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.kpi::after{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:11px 0 0 11px;}
+.kpi.paid::after{background:var(--paid);}.kpi.pending::after{background:var(--pending);}.kpi.open::after{background:var(--open);}.kpi.rejected::after{background:var(--rejected);}.kpi.procore::after{background:var(--procore);}.kpi.all-kpi::after{background:var(--accent);}
+.kpi.kpi-active{box-shadow:0 0 0 2.5px var(--accent);}
+.kpi-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.kpi-val{font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;color:var(--text);line-height:1;margin-bottom:3px;}
+.kpi-sub{font-size:11px;color:var(--muted);}
+.kpi-sub b{color:var(--text);font-weight:600;}
+
+/* RESULTS TABLE */
+.tbl-wrap{background:var(--white);border:1.5px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.tbl-hdr{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap;gap:8px;}
+.tbl-count{font-size:12px;color:var(--muted);}.tbl-count b{color:var(--text);font-weight:700;}
+.tbl-ctrls{display:flex;gap:7px;align-items:center;}
+.ctrl-sel{background:var(--white);border:1px solid var(--border);border-radius:7px;padding:5px 9px;font-size:12px;color:var(--text);outline:none;cursor:pointer;font-family:'Inter',sans-serif;}
+.export-btn{background:var(--white);border:1px solid var(--border);border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.export-btn:hover{border-color:var(--accent);color:var(--accent);}
+.tbl-scroll{overflow-x:auto;}
+.main-table{width:100%;border-collapse:collapse;min-width:800px;}
+.main-table th{padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;border-bottom:1px solid var(--border);}
+.main-table th:hover{color:var(--text);}.main-table th.sorted{color:var(--accent);}
+.main-table tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.main-table tbody tr:last-child{border-bottom:none;}
+.main-table tbody tr:hover{background:var(--accent-bg);}
+.main-table td{padding:10px 14px;font-size:13px;vertical-align:middle;}
+.td-v{font-weight:600;color:var(--text);}
+.td-v small{display:block;font-size:11px;font-weight:400;color:var(--light);margin-top:1px;}
+.td-memo-cell{font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.td-mono{font-family:'Courier New',monospace;font-size:11px;color:var(--muted);}
+.td-d{font-size:12px;color:var(--muted);white-space:nowrap;}
+.td-amt-r{font-weight:700;text-align:right;white-space:nowrap;}
+.due-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;}
+.due-tag.overdue{background:#fee2e2;color:var(--overdue);}
+.due-tag.soon{background:#fef3c7;color:#92400e;}
+.status-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.p-paid{background:var(--paid-bg);color:var(--paid-text);}.p-pend{background:var(--pending-bg);color:var(--pending-text);}.p-open{background:var(--open-bg);color:var(--open-text);}.p-rej{background:var(--rejected-bg);color:var(--rejected-text);}.p-procore{background:var(--procore-bg);color:var(--procore-text);}
+.ss-tab[data-s="Procore Open"].active{color:var(--procore);border-bottom-color:var(--procore);}
+.ss-tab[data-s="Procore Open"].active .ss-count{background:var(--procore-bg);color:var(--procore-text);}
+.main-table tbody tr.row-procore td{background:#faf9ff;}
+.main-table tbody tr.row-procore:hover td{background:#f0ecff;}
+
+/* PAGINATION */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);background:var(--surface);flex-wrap:wrap;gap:8px;}
+.pag-info{font-size:11px;color:var(--muted);}
+.pag-btns{display:flex;gap:4px;}
+.pb{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:4px 9px;font-size:11px;color:var(--text);cursor:pointer;font-family:'Inter',sans-serif;font-weight:500;transition:all .12s;}
+.pb:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.pb:disabled{opacity:.3;cursor:not-allowed;}
+.pb.active{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;}
+.empty{text-align:center;padding:52px 24px;color:var(--light);}
+.empty p{font-size:14px;margin-top:10px;}
+.empty small{font-size:12px;margin-top:5px;display:block;}
+
+/* PAYMENT INFO BANNER — always open */
+.pay-info{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;}
+.pay-info-static-hdr{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+.pit-icon{width:28px;height:28px;background:var(--accent-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.pit-label{font-size:12px;font-weight:700;color:var(--text);flex:1;}
+.pit-meta{font-size:11px;color:var(--muted);}
+.pay-info-body{display:none;padding-bottom:18px;padding-top:16px;}
+.pay-info-body.open{display:block;}
+.pay-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.pay-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+.pay-section-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.pay-section-title span{background:var(--accent-bg);color:var(--accent-dark);border-radius:4px;padding:2px 7px;font-size:10px;}
+.pay-row{display:flex;gap:12px;margin-bottom:10px;align-items:flex-start;}
+.pay-row:last-child{margin-bottom:0;}
+.pay-row-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.pay-row-text{font-size:12px;color:var(--text);line-height:1.6;}
+.pay-row-text b{font-weight:600;color:var(--text);}
+.pay-row-text .highlight{background:#fef9c3;color:#713f12;padding:1px 5px;border-radius:3px;font-weight:600;font-size:11px;}
+.pay-alert{background:#fff2ed;border:1px solid #fcd9c4;border-radius:8px;padding:10px 14px;margin-top:10px;display:flex;gap:9px;align-items:flex-start;}
+.pay-alert-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.pay-alert-text{font-size:12px;color:#7c2d12;line-height:1.5;}
+.pay-contact{margin-top:14px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);}
+.pay-contact a{color:var(--accent-dark);font-weight:600;text-decoration:none;}
+.pay-contact a:hover{text-decoration:underline;}
+.wire-link{display:inline-flex;align-items:center;gap:6px;background:var(--open-bg);color:var(--open-text);border:1px solid #bfdbfe;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;text-decoration:none;margin-top:10px;transition:all .15s;}
+.wire-link:hover{background:#dbeafe;border-color:#93c5fd;}
+
+@media(max-width:960px){.kpi-row{grid-template-columns:repeat(3,1fr);}.pay-info-grid{grid-template-columns:1fr;}}
+@media(max-width:880px){}
+@media(max-width:660px){.page{flex-direction:column;}header{padding:0 14px;}.search-bar{padding:12px 14px;}.kpi-row{grid-template-columns:repeat(2,1fr);}.pay-info{padding:0 14px;}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACmALEDASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAcIBQYCAwQJAf/EAEsQAAEDAwEFBAYFBwYPAAAAAAEAAgMEBQYRBxIhQVEIEyIxFDJhcaGxFUJSkfAJFiNygbPBNzl1drLRGCUzNTZDVWJzdIKTlKLT/8QAGgEBAAIDAQAAAAAAAAAAAAAAAAQFAQIDBv/EAC8RAAIBAgQEBAYCAwAAAAAAAAABAgMRBBIhQSIxUWETQnHwBRQygbHhI2JSkdH/2gAMAwEAAhEDEQA/ALloiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIuuoqIKZgfUTxQsJ0DpHho16cV+yzQwxd7LLHHH9pzgB960c4q93yBzRdcFRBUNLoJo5QOBLHB2n3LsW0ZKSundAIiLICIiAIuFRNDTwumnljijb6z3uDWj3krqo66hrd70Osp6nc03u6la/d9+hWLq9jGZXsehF0RVlHLUyUsVVBJPFxkibIC9nvHmF3rITT5BERDIREQBERAEREAREQBERAY7IbYy7W40rn927e3o3dHAH+8rWrLdJbbM+xX1msB8LXP4gA/NvyWczEVotbJ6De72CYSnd8wACD7/NY2N9Dltt7uTdguEQ4HmPaOrT8F5X4nrjv4OGslpf6akd4+vv0yuR4bhR1mMV4uNvcZKKQ6OBOo06H+BW22e5U10o21FM/Xk5h82HoVqVou77XUOsN+Z+gPga5/ENB69Wn4LyXmlr8RuIutsJlt8h8TddQB9l38CouAxXyl61BPwr8cN6b6rsazmkrkiosfYLxR3qgbV0b9eT2H1mO6FZBexp1I1IqcHdMJpq6C6a2qp6KlkqqqZkMMbd573HQAJW1VPRUklVVStigibvPe48AFFVfWXXaLe/QaAPprPA7VziOH6zupPILStWyaLVvkiPicSqSSSvJ8kftwrbrtFvYoKAPprRA7VznDh+s7qejVlshvNHitvZjWNR71aeD3tG8Wk8z1efgmQ3mjxagZjWMxg1rvC97fEWuPDU9Xn4L9x6zUWJW45Bf3CS4PGscZOpa48h1ceZ5LOHw7TzS1k/dkVLcs0lGXF5pbRXRGV2d4zNZopK6vlc6vqm+NhOu4NddCeZ181ty0vAq663q8Vt4rGOZSOj7qAfVb4tdB18uJW6KVWpunLK+ZZ4B03QXhqy2vv3+4REXImBERAEREAREQBERAEREAWm5VZKihm+mbLvMew70kbPMdSPZ1C3JFBx+ApY2nkno1qnun1QNLilt2bWowSltPc4W6gjl7R1aenJYmw36Wy1b8ayeMeinwNfJxawHy97D15fL1ZtjdVb6j84Mf3o5IjvyxM5dXNHTqFxgqLVtEshpZyylvFO3VpHI9R1aeY5KgVOsq1paV1vtUj37+/SHUnLNZfV+TFX+gueDXVt7szjPbJCN9pOrQD9V3s6O/B32z5Narlj5vTKgRU8Y/Td5wMbgOIP44rT8JqrvbGXKxZRSB1ppIzvTznwNB8mjX1geQHksJTw1OY10dlsdP9H2Ckdrppw/WcfrOPIKwwd6OtJWUvK9nvbsRViHS1h5vLvf/AIeqvq7rtFvvoNCH09np3aucRy+07q48gstkV5o8Xt7MZxmMOrT4ZHsG85rjz9rz8F+5HeqTGKBmM4xHvVh8L3tG85hPzefguWP2eixC3G/X93e3F/8Ak4ydXNJ5Dq7qeSuMPh2nd6yfuyIzcs0lGXF5pbRXRDH7PRYlbnX+/u7y4P13Ga7xaTyHVx5nkvHarfcs3uxudzLobdGdGNB4H/db/E/gLTbrjm93N0uhdFbozuta06Aj7Lf4lSVTwxU8DIII2xxMG61rRoAFaSksMrL6/wAfs2w2GWJS0tSXJbyfV9hTQQ00DIKeNscTButY0aABdiIoD1LxJJWQREQyEREAREQBERAEREAREQBERAFH2UYbBR32LI7dcmWiCJ/eVTvsdSwac/LT2/sW9V9XTUFHLV1crYoYm7z3uPABRXWVN12jX30SkD6azU7tXOI5fad1ceQ5KFjY05pRkry2IONnBJRteT5IVlTdto16FFR95TWendq5xHD9Z3Vx5Dkstkd6pMZoWYxjEetWfC97PEWOPzefgmR3ukxuhZjGLxg1Z8D5GDUtJ+bz8FzsFoocPtpvt9cJLjJruM11LSeQ6uPM8vnIw+Had3rJ+9Cublmkoy4vNLZLovf6WCz0OH2032+kSXF41jjJ1c0nkOrup5LyWi3XHNrubpdC6K3Ru0YwcARr6rf4n8Dwuk+nav6fyitZQWlsgjjDnaBxJ9Rn8T7D+zvzx2SYzf6XI7ZVCaxxxNjZTxjSONp+q4DzB8w7rw6a3VOn4XBF8b/0uy7nDglDM4vwo7bv+z7Eo08MVPAyCCNscUbQ1jWjQABc1h8SyK35Lam11BJxHhliPrRu6H+/mswqycZRk1LmejpzhOClB6BERam4REQBERAEREAREQBERAEREAXRcKymoKOSrrJmQwxt3nOceAS4VlNb6OSsrJmwwRDV73eQUV1VRdto989Fpt+ls1O7Uk+Q9p6uPIclwrVsnDHWT5IjYjE+FaMVeT5IVdRddo98FLSh9NZ6d2pJHkOp6uPIcllskvdLjlEzF8Xj1q/Ue9g3nMJ93m8/BMkvlLjtHHi2LR61R8D3s4ljj83n4LnYbTQYbbDe72RLcpB+jj11c0keqOp6n8HOHw7Tu9ZP3oVLcs0kpcXmlsl0Xv8ASw2ihw62m+3xwluMgO4zXUtJ5Dq7qeXzxTIa7JZKnI7zHObbStc5sMLSXPA+owfM/geqzWy4ZrdjdrsXR29jtGMB0Dhr6rfZ1P4ElQQxQQMghjbHGxoa1rRoAByVq5LCqy1l+O3qZw+F+airK1Jcl/k+rIzoZ8f2nY39Gupm22upNXU8YPBg5EeW83yBCxOM5RUYpcpMOzKEG3u/RxySDeYxp9/nGfgshtMw2tt9T+dWKB0VRA7vZoIhxHV7B82rpoK6xbXMbdbK4x0WQUrCWOHnr9pvVh5jl9xXdOGS61g+fWLOE/FVXK9Kq5dJrp6mCzC03jZpemZXjEhqLNKR3jCd5rWn6jurTydy+cs4Lllqy+ysuNslG8PDPA4jfhd0I+R5qHcPzKtwe7y4FtAh3rXIDFHLKN5sbHaj/qiPw+/TG51YL7skyGPNcOkdU2Cdw72MEuaxhIO4/qw6+F3mPfprirS8W0Jvi2fX9muHxXy16tJcHmjvB9V2LJotZ2c5rZ84x+O6WqUB4AbUUzj44H/Zd/A81syrJRcXZ8z0lOpGrFTg7phERam4REQBERAEREAREQBERAYDOrHNkNrp7fHKImelMfK88mAO10HM8QtYyS+UuPUbMWxaMGqPge9nEtJ4ftefh8tqziW8x2NzbFC6SqleGEt9ZjSDq4e3gB+1YXEMX/N2hfdqynfW3VzSRGziWa8hrz6n8HWNOObNuVeKjOVVxpqza1l0XRdzx2K00GGWw3u9uEtykB3I9dS0nkPb1P4PkstruOaXU3a7l0dAw6MYNQHD7LfZ1P4HopMevWSX51dkcb6amjPhi18x9lvHgOp/AkKCKOCFkMMbY42DRrWjQAdArBzjh42i7ye/T0I+HwnzFk45aa5J85PqxBFHBCyGFjY42Dda1o0AC5oigl4lYKFNsOz+4WyrObYT3kFXTu76op4PMaeb2Dn7W8/gprRdaNaVKV0RcXhIYqnkn9nun1RB1ruWN7csUdZ7p3VvyejYXMe0eIH7berD9ZvL7itY2fZpc9nl5n2cbSacSWeQGOKWQb7ImO4DifWiP/r94GwbYtk90pr5Hm2zpskFzZKJJqSBwaS7X12cdP1m+R4+0LYavG6jargLaPNLBPYsgpBpFUFg0D9PWaQTqw82ny+4qfnp5f6PbeL7FF4OJdXlarHfyzXR9z17MdnEOFZxdrnZalkthudI10DN/eMTt/XdB+s3Q8D+w9TJiiDs+W3aBjc9xxfKaV5tNG3WhqC4OaTvaFrHa6lpHEAjh7PJS+oWIv4mrv3Ln4coqgssHHno9nv9ugREXAnBERAEREAREQBEUf2favjdbtgvuy+qk9CvltMTqZsjvDWRvp45SWHk5u+QW+eg1HMACQERRbtx25YnshrLXS5Lb73VvuUckkJt8MTw0MLQd7fkZp6w8tUBKSLyWavhutnorpTtkbDWU8dRG2QAODXtDgDoSNdD1UXba+0DhuyXIaSx5HbL9VVNXSiqjdQQRPYGFzm6EvladdWnkgJcRVm/w1dln+wMy/8ADpv/ALqYNim1CwbWcVqcjxyjudLSU1c+ieyvjYyQvaxjyQGPcN3SRvPXUHggN5RR/tr2rWfZPZ6S8X+yX6ut9TN3JntsMUjYX6agP35GEb2h0I1HA+XDX2bHdpeObU8TOR416VHAyd0EsFWxrZont04ODXOA1BBGhPAoDdEUHZX2ncCsO0WowOK0ZNebvDVNo/8AFtNDJG+Y6DcaXStJIJ3Tw4EFTfE4viY90boy5oJY7TVvsOhI19xQHJFD1j7Q+FXjbHJssprXkDL1HX1FCZ5IIRTd5CHl53hKXbp7s6eHXy4BShk13psfx2432sZNJTW+mkqZWxAF7msaXENBIGug5kIDIoow2HbbsU2vTXSLGrfeqR1tbG6b6QhiYHb5dpu7kj9fVPnopOc5rWlziGtA1JJ0ACA/UVcNoPbB2d45d5rZZrfc8jlgkLJZ6csip9QdDuvcdXe8N06ErbdivaKwDafcG2ehfVWi9OaSyhrw1pm0Gp7twJDyBx04HQE6aBATEiIgCIiAIiIAvm32um3V/a5yFtj9K+lDPQCk9GJ70y+h0+7uacd7XTTRfSRUG2s/ziNH/WCy/uaVATH2U+0ZFmrY8MzqeOjymLwQVDwI2V2nIj6so5jny6KOvyln+kOFf8rV/wBuNb92rezkzLO+znZ/AyjyeEmappYj3ba4jjvN09Wbnrw3ufHiqjbXdpGU51b7BaMxikN3xxs9JLUTAtmmDnN4StPk9u4QTz58ddQPpzs7/k/x3+iqX901Up/KLlo2wY6X6bn0Oze18tO/kV1tnf8AJ/jv9FUv7pqpV+UWaH7YccY7ydZ2A/8AfkQEyUeQdkUUkIlp9n3ed23e1tLNddOP+rUybK24G7Eo63ZzS2mCw1kz5WOttO2GGWQHu3u0AHHwbpOn1Qoko+yNsdlo4ZX0d53nxtcdLg7zI9ymTZzh1lwHD6PFceZOy20ZkMTZpN9433ue7V3PxOKA57QsTtOcYbcsWvcPe0VfCY3Eesx3m17Tyc0gEe5fPPFcvzTs153mOLSwF09RSvpg0u8HeaE09U3qAHa6dHEHQhfR693OgstnrLvdKmOloaOF0880h0axjRqSf2BfNnaBV5d2idp2TZLY7bv01qoHzxQDh3VJF6rdecjtS7TmSQOAQExdgjZK+trZdrOS0xl0e9lnExJLpDqJKgjn5loJ57x8wCroKsXYL2qxZJhh2e3NzGXWxQg0h1A7+l10HDqwkA+wt9qs6gPn7s0/nCKr+s92/s1Curtm/kky7+hqr905UnwGWOi/KC1L6t4ha7Kbk0F501LxOGD9pc0D3hXV23TRU+x7L5p5Gxxts1Vq5x0A/ROCAq5+TS/zjmv/AAqX5yK1W16hutz2VZXbrGXi51NnqoqXcOjjI6JwAB5E+QPIlVW/JpNd6dmrtDu93SjX26yK32V5FY8Vsc97yK501tt8A/STzv3Wg8gOZJ5AcSgPnj2Qcq2aYhml2g2n2mlf6XGyCkq62k7+Oke1zt9rmEHd3tWje04bvHQEq0dq7P2yHItodLtIxa5BtHE9szKOy1TG0vpDXah7XR8WDy8DSB8l+ZLsc2NbfMfbm1hLqKquILxcrdpG50g4ETREbpcD62oDj15qrlukyns29ohlipL0aumbUU7axsWrY6ymk0OjmHXRwDjp0PkUB9I0REAREQBERAFVDPtiG0C8dsCm2k0NBRvx2O722qdM6rY2Tu4IoGyHc89QY3cOateiAKu/ao7OdBtGp58pxZkVFlkUer2aBsdwA8mvPk1+muj+fAHhoRYhEBh8Ipp6PC7HSVUTop4LdTxyxu82ObG0EH3EKtfbI2JbQNpe0C03rEaGknpaW2inkdLVsiIkEj3cA72OHFWsRAUhZs17YjGBjcsuAa0aADIG8B96sZ2ZbJtKsOB1tHtTuM1fen3OSSCSWsFQRTmKINbvDyG+JDp7fapSRAQL2vcT2q5/YKTEcFt9IbPKRNcp5axkT5XNPgiAJ9Uesep3ehWe7LGyYbKtm7aC4xU7r9cX9/dJI9HAHyZEHc2tB92pcR5qXEQFMMs7O+0rE9vTs32T0Vu+jYqsVtJE+sbCIy7XvIC0kHc4uHDhuuAVx7bLUz2+mmraX0SpfE100G+H908jxN3hwOh1GvNehEBVHtVdnC/5TmJ2hbOpoRdpSx9ZRul7l7pWABs0T/Le4DUEjiNQdSozvOB9rfObc3Fsj+lX2vVrXirraeOJwB4F7mHeeBprx3vJX6RARX2adkNLshwd9sfVMrbvXSCe41LAQwvA0DGa8dxvHQniSSeGug3HaThlkz/Da/FsghdJRVjNN5h0fE8cWyNPJzTx+B1BK2NEBRWPYn2jtk96rINmd3lrbXO8lklJUxNEg5F8Mx3Q/TmNfYVm9j3Zs2g5BtKhzzbFXFpgqGVToJJ2z1FXIwgta8tJaxg0HM8BoAPMXPRAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQH/9k=" alt="Nexus" class="logo-img"/>
+  <div class="hdr-div"></div>
+  <span class="hdr-title">Invoice Portal</span>
+  <div class="hdr-right">
+    <span class="updated-lbl">Updated: <b id="update-date">—</b></span>
+    <div id="admin-key-area">
+      <input type="password" id="admin-key-input" placeholder="Admin key" autocomplete="off"/>
+      <button id="admin-key-btn" onclick="checkAdminKey()">Unlock</button>
+    </div>
+  </div>
+</header>
+
+<!-- ADMIN BAR -->
+<div id="admin-bar">
+  <div class="admin-inner">
+    <span class="admin-lbl">👁 Local Preview</span>
+    <label class="upload-btn-label" for="csv-upload">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Preview a File
+    </label>
+    <input type="file" id="csv-upload" accept=".csv,.xlsx,.xls" onchange="handleCSVUpload(this)"/>
+    <span id="upload-status">Preview a CSV/Excel locally (does not change the shared data)</span>
+    <span class="upload-hint">Local preview only · To update for everyone, replace invoices.csv in the repo</span>
+  </div>
+</div>
+
+<!-- PAYMENT TIMING INFO -->
+<div class="pay-info">
+  <div class="pay-info-static-hdr">
+    <div class="pit-icon">📋</div>
+    <span class="pit-label">Payment Timing &amp; Processing</span>
+    <span class="pit-meta">Cutoff: Wednesday 12:00 PM CST &nbsp;·&nbsp; ACH: Thursday &nbsp;·&nbsp; Delivery: Friday</span>
+  </div>
+  <div class="pay-info-body open" id="pay-info-body">
+    <div class="pay-info-grid">
+
+      <div class="pay-section">
+        <div class="pay-section-title">📅 Standard Payment Schedule <span>ACH</span></div>
+        <div class="pay-row">
+          <div class="pay-row-icon">📥</div>
+          <div class="pay-row-text">All invoices must be submitted to the <b>AP inbox or Procore</b> by <span class="highlight">Wednesday 12:00 PM CST</span> of the week payment is needed.</div>
+        </div>
+        <div class="pay-row">
+          <div class="pay-row-icon">🏦</div>
+          <div class="pay-row-text">Payments are initiated via <b>ACH on Thursday afternoons</b>, with funds typically delivered to vendor accounts by <b>Friday afternoon</b>.</div>
+        </div>
+        <div class="pay-row">
+          <div class="pay-row-icon">📌</div>
+          <div class="pay-row-text"><b>Note:</b> Invoice dates for invoices facilitated through Procore are based on the date submitted to Procore.</div>
+        </div>
+        <div class="pay-alert">
+          <div class="pay-alert-icon">⚠️</div>
+          <div class="pay-alert-text"><b>Early submission required for invoices due Mon–Wed:</b> If a due date falls on a Monday, Tuesday, or Wednesday, the invoice must be submitted the <b>prior Wednesday by 12:00 PM CST</b> — one full week in advance — to be included in that Friday's payment run.<br><br>Invoices received <b>after the Wednesday 12:00 PM CST cutoff</b> will be processed the following week.</div>
+        </div>
+      </div>
+
+      <div class="pay-section">
+        <div class="pay-section-title">💸 Wire Transfers <span>Immediate</span></div>
+        <div class="pay-row">
+          <div class="pay-row-icon">📝</div>
+          <div class="pay-row-text">For payments governed by a <b>signed agreement requiring immediate disbursement</b> (e.g., LNTP, deposit), please bypass the standard AP process and route directly through <b>Treasury</b>.</div>
+        </div>
+        <div class="pay-row">
+          <div class="pay-row-icon">🔗</div>
+          <div class="pay-row-text">
+            <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=zMyeUJYmx0W8wGN3jujDV4HMhnpXhW5Btj0zN8aXSv9UNU41TjYyTTVUSjIwNlFKQUJPWVRNWEJRUy4u" target="_blank" class="wire-link">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Wire Transfer Request Form
+            </a>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <div class="pay-section-title" style="margin-bottom:8px">✉️ Questions?</div>
+          <div class="pay-contact">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            Contact Accounts Payable: <a href="mailto:ap@nexus-datacenters.com">ap@nexus-datacenters.com</a>
+          </div>
+        </div>
+        <div class="pay-alert" style="margin-top:14px;background:#f0f6ff;border-color:#bfdbfe;">
+          <div class="pay-alert-icon">ℹ️</div>
+          <div class="pay-alert-text" style="color:#1e3a5f;"><b>About this data:</b> This portal includes invoices submitted through Procore that are not yet approved, as well as invoices received by AP that are pending processing. <b>Amounts and statuses are subject to change</b> until final approval is complete.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SEARCH BAR -->
+<div class="search-bar">
+  <div class="sb-field f-vendor">
+    <div class="sb-lbl">Vendor Name</div>
+    <div class="sb-iw">
+      <svg class="sb-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="s-vendor" type="text" class="sb-input" placeholder="Search vendor…"
+        oninput="onVendorType(this.value)" autocomplete="off" spellcheck="false"
+        onblur="setTimeout(closeVDrop,200)"/>
+      <div class="vdrop" id="vdrop"></div>
+    </div>
+  </div>
+  <div class="sb-field f-invoice">
+    <div class="sb-lbl">Invoice Number</div>
+    <div class="sb-iw">
+      <svg class="sb-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg>
+      <input id="s-invoice" type="text" class="sb-input" placeholder="e.g. INV-1234…"
+        oninput="onInvoiceType(this.value)" autocomplete="off" spellcheck="false"
+        onblur="setTimeout(closeIDrop,200)"/>
+      <div class="idrop" id="idrop"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CLEAR FILTERS BUTTON -->
+<div id="clear-btn-row" style="display:none;padding:0 28px 10px;">
+  <button onclick="clearAll()" style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:#fee2e2;color:#b91c1c;border:1.5px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;letter-spacing:.02em;" onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Clear Filters
+  </button>
+</div>
+
+<!-- STATUS TABS -->
+<div class="status-strip">
+  <button class="ss-tab active" data-s="" onclick="setStatus(this,'')">All <span class="ss-count" id="sc-all">—</span></button>
+  <button class="ss-tab" data-s="Paid In Full" onclick="setStatus(this,'Paid In Full')">✓ Paid <span class="ss-count" id="sc-paid">—</span></button>
+  <button class="ss-tab" data-s="Pending Approval" onclick="setStatus(this,'Pending Approval')">⏳ Pending <span class="ss-count" id="sc-pend">—</span></button>
+  <button class="ss-tab" data-s="Open" onclick="setStatus(this,'Open')">◎ Open <span class="ss-count" id="sc-open">—</span></button>
+  <button class="ss-tab" data-s="Rejected" onclick="setStatus(this,'Rejected')">✕ Rejected <span class="ss-count" id="sc-rej">—</span></button>
+  <button class="ss-tab" data-s="Procore Open" onclick="setStatus(this,'Procore Open')">🔄 Procore <span class="ss-count" id="sc-procore">—</span></button>
+  <div class="ss-sep"></div>
+  <button class="ss-tab due-tab is-over" data-d="overdue" onclick="setDueTab(this,'overdue')">⚠ Overdue <span class="ss-count" id="sc-over">—</span></button>
+  <button class="ss-tab due-tab is-week" data-d="this_week" onclick="setDueTab(this,'this_week')">⏰ Due This Week <span class="ss-count" id="sc-week">—</span></button>
+  <button class="ss-tab due-tab is-30" data-d="next_30" onclick="setDueTab(this,'next_30')">📅 Due in 30 Days <span class="ss-count" id="sc-30">—</span></button>
+</div>
+
+<!-- PAGE BODY -->
+<div class="page">
+  <!-- Hidden filter inputs (previously in sidebar) -->
+  <select id="f-subsidiary" style="display:none"><option value=""></option></select>
+  <select id="f-dept" style="display:none"><option value=""></option></select>
+  <select id="f-period" style="display:none"><option value=""></option></select>
+
+  <div class="main">
+    <!-- KPI CARDS -->
+    <div class="kpi-row" id="kpi-row" style="display:none"></div>
+
+    <!-- PROMPT WHEN NO SEARCH -->
+    <div id="no-search-prompt" style="text-align:center;padding:60px 24px;color:var(--light);">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="margin-bottom:14px;opacity:.35"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p style="font-size:16px;font-weight:600;color:var(--muted);margin-bottom:6px;">Search to see invoices</p>
+      <p style="font-size:13px;">Enter a vendor name or invoice number above to view results</p>
+    </div>
+
+    <!-- RESULTS TABLE -->
+    <div id="results-section" style="display:none">
+    <div class="tbl-wrap">
+      <div class="tbl-hdr">
+        <div class="tbl-count" id="tbl-count">Loading…</div>
+        <div class="tbl-ctrls">
+          <select class="ctrl-sel" id="sort-sel" onchange="changeSortSel(this.value)">
+            <option value="dueDate-asc">Due Date ↑</option>
+            <option value="date-desc">Bill Date ↓</option>
+            <option value="date-asc">Bill Date ↑</option>
+            <option value="amount-desc">Amount ↓</option>
+            <option value="amount-asc">Amount ↑</option>
+            <option value="vendor-asc">Vendor A→Z</option>
+          </select>
+          <button class="export-btn" onclick="exportCSV()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+        </div>
+      </div>
+      <div class="tbl-scroll">
+        <table class="main-table">
+          <thead><tr>
+            <th onclick="sortBy('vendor')">Vendor <span>↕</span></th>
+            <th onclick="sortBy('invoice')">Invoice # <span>↕</span></th>
+            <th>Memo</th>
+            <th onclick="sortBy('date')">Bill Date <span>↕</span></th>
+            <th onclick="sortBy('dueDate')">Due Date / Date Paid <span>↕</span></th>
+            <th>Period</th>
+            <th onclick="sortBy('amount')" style="text-align:right">Amount <span>↕</span></th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="t-body"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="empty" style="display:none">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <p>No invoices match</p><small>Try adjusting your search or filters</small>
+      </div>
+      <div class="pag" id="pag"></div>
+    </div>
+    </div><!-- /results-section -->
+  </div>
+</div>
+
+<script>
+
+let allData=[], filteredData=[], page=1, pageSize=25;
+let sortCol='dueDate', sortDir=1;
+let activeStatus='', activeDue='';
+let adminUnlocked=false;
+const ADMIN_KEY='nexus2024admin';
+const TODAY=new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
+
+function ddays(r){
+  if(!r.dueDate)return null;
+  try{const[m,d,y]=r.dueDate.split('/');return Math.round((new Date(+y,+m-1,+d)-TODAY)/86400000);}catch{return null;}
+}
+
+function init(data){
+  allData=data.map(r=>({...r, vendor:normVendor(r.vendor||''), memo:scrubMemo(r.memo||''), isProcore:r.status==='Procore Open'||r.status==='Open Procore', _days:ddays(r)}));
+  document.getElementById('update-date').textContent=TODAY.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  buildDropdowns();buildStatusCounts();applyFilters();
+}
+
+// ── ADMIN ──
+function checkAdminKey(){
+  if(document.getElementById('admin-key-input').value===ADMIN_KEY){
+    adminUnlocked=true;
+    document.getElementById('admin-bar').classList.add('active');
+    document.getElementById('admin-key-area').innerHTML='<span style="font-size:11px;color:var(--paid);font-weight:700;">✓ Admin</span>';
+  }else{
+    const i=document.getElementById('admin-key-input');
+    i.style.borderColor='var(--rejected)';setTimeout(()=>i.style.borderColor='',900);
+  }
+}
+document.getElementById('admin-key-input').addEventListener('keydown',ev=>{if(ev.key==='Enter')checkAdminKey();});
+
+function handleCSVUpload(inp){
+  if(!adminUnlocked)return;
+  const file=inp.files[0];if(!file)return;
+  const s=document.getElementById('upload-status');s.textContent='Parsing\u2026';s.className='';
+  const name=(file.name||'').toLowerCase();
+  const isExcel=name.endsWith('.xlsx')||name.endsWith('.xls');
+  const ingest=(csvText)=>{
+    try{
+      const parsed=parseCSV(csvText);
+      if(!parsed.length)throw new Error('No records found');
+      allData=parsed.map(r=>({...r,_days:ddays(r)}));
+      document.getElementById('update-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      buildDropdowns();buildStatusCounts();clearAll();
+      s.textContent=`\u2713 ${parsed.length} invoices loaded from ${file.name}`;s.className='ok';
+    }catch(err){s.textContent=`\u2717 Error: ${err.message}`;s.className='err';}
+  };
+  const fr=new FileReader();
+  if(isExcel){
+    if(typeof XLSX==='undefined'){s.textContent='\u2717 Excel reader unavailable (offline / blocked). Export the sheet as CSV and upload that instead.';s.className='err';return;}
+    fr.onload=ev=>{
+      try{
+        const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        ingest(XLSX.utils.sheet_to_csv(ws));
+      }catch(err){s.textContent=`\u2717 Error reading Excel: ${err.message}`;s.className='err';}
+    };
+    fr.readAsArrayBuffer(file);
+  }else{
+    fr.onload=ev=>ingest(ev.target.result);
+    fr.readAsText(file);
+  }
+}
+function parseCSV(txt){
+  const lines=txt.split('\n').filter(l=>l.trim());if(lines.length<2)throw new Error('File is empty');
+  const headers=parseCSVLine(lines[0]);
+  const col=(...names)=>{for(const n of names){const i=headers.findIndex(h=>h.trim()===n.trim());if(i>=0)return i;}return -1;};
+  const iSub=col('Maximum of Subsidiary Legal Name','Subsidiary Legal Name','Subsidiary');
+  const iName=col('Maximum of Name','Name','Vendor');
+  const iDoc=col('Document Number','Invoice Number','Invoice #');
+  const iDate=col('Date','Bill Date');
+  const iDue=col('Maximum of Due Date/Receive By','Due Date/Receive By','Due Date');
+  const iPer=col('Period');
+  const iDept=col('Maximum of Department','Department');
+  const iMemo=col('Maximum of Memo (Main)','Memo (Main)','Maximum of Memo','Memo','Description');
+  const iAmt=col('Maximum of Amount','Amount');
+  const iPaid=col('Maximum of Amount Paid','Amount Paid');
+  const iStat=col('Status');
+  const iType=col('Type');
+  const iClosed=col('Maximum of Date Closed','Date Closed','Date Paid');
+  if(iName<0)throw new Error('Could not find vendor name column');
+  const PROCORE_S=new Set(['Procore Open','Open Procore']);
+  return lines.slice(1).map(ln=>{
+    const v=parseCSVLine(ln),nm=(v[iName]||'').trim();if(!nm)return null;
+    let status=iStat>=0?(v[iStat]||'').trim():'';
+    const rowType=iType>=0?(v[iType]||'').trim():'';
+    if(!status && PROCORE_S.has(rowType)) status='Procore Open';
+    if(PROCORE_S.has(status)) status='Procore Open';
+    return{subsidiary:iSub>=0?(v[iSub]||'').trim():'',vendor:normVendor(nm),
+      invoice:iDoc>=0?(v[iDoc]||'').trim():'',date:iDate>=0?(v[iDate]||'').trim():'',
+      dueDate:iDue>=0?(v[iDue]||'').trim():'',dateClosed:iClosed>=0?(v[iClosed]||'').trim():'',
+      period:normPeriod(iPer>=0?(v[iPer]||'').trim():''),
+      department:iDept>=0?(v[iDept]||'').trim():'',memo:iMemo>=0?scrubMemo((v[iMemo]||'').trim()):'',
+      amount:iAmt>=0?parseFloat(v[iAmt]||'0')||0:0,
+      amountPaid:iPaid>=0?parseFloat(v[iPaid]||'0')||0:0,
+      status:status, isProcore:status==='Procore Open'};
+  }).filter(Boolean);
+}
+
+// Vendor name normalization — consolidates variants to canonical names
+const VENDOR_MAP={
+  'audio video solutions texas llc':'Audio Video Solutions',
+  'audio video solutions':'Audio Video Solutions',
+  'corephase, llc':'CorePhase','corephase':'CorePhase',
+  'creatum energy':'Creatum','creatum solar llc':'Creatum',
+  'hdr':'HDR','hdr engineering, inc.':'HDR',
+  'industrial project innovation, llc':'IPI','ipi accounting':'IPI',
+  'naes':'NAES','naes corporation':'NAES',
+  'slr international':'SLR International','slr international corporation':'SLR International',
+  'source blue llc':'Source Blue LLC','sourceblue':'Source Blue LLC',
+  'terracon':'Terracon','terracon consultants, inc.':'Terracon',
+  'wr utilities':'WR Utilities','wr utilities & excavation':'WR Utilities',
+  'yates':'Yates','w.g. yates & sons construction company':'Yates',
+};
+function normVendor(name){return VENDOR_MAP[name.toLowerCase().trim()]||name.trim();}
+
+function normPeriod(p){
+  if(!p)return'';
+  const m=p.trim().match(/^([A-Za-z]{3})-(\d{2})$/);
+  if(m){const yr=parseInt(m[2]);return m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()+' '+(yr<50?'20':'19')+m[2];}
+  return p.trim();
+}
+function parseCSVLine(l){
+  const r=[];let c='',q=false;
+  for(let i=0;i<l.length;i++){if(l[i]==='"'){q=!q;continue;}if(l[i]===','&&!q){r.push(c);c='';continue;}c+=l[i];}
+  r.push(c);return r;
+}
+
+// ── DROPDOWNS ──
+function buildDropdowns(){
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const subs=[...new Set(allData.map(r=>r.subsidiary).filter(Boolean))].sort();
+  const depts=[...new Set(allData.map(r=>r.department.split(':')[0].trim()).filter(Boolean))].sort();
+  const periods=[...new Set(allData.map(r=>r.period).filter(Boolean))].sort((a,b)=>{
+    const[ma,ya]=a.split(' '),[mb,yb]=b.split(' ');return(ya-yb)||(mo.indexOf(ma)-mo.indexOf(mb));
+  });
+  document.getElementById('f-subsidiary').innerHTML='<option value="">All Entities</option>'+subs.map(s=>`<option value="${e(s)}">${e(s)}</option>`).join('');
+  document.getElementById('f-dept').innerHTML='<option value="">All Departments</option>'+depts.map(d=>`<option value="${e(d)}">${e(d)}</option>`).join('');
+  document.getElementById('f-period').innerHTML='<option value="">All Periods</option>'+periods.map(p=>`<option value="${e(p)}">${e(p)}</option>`).join('');
+}
+
+// ── STATUS COUNTS ──
+function buildStatusCounts(src){
+  // src = search-filtered base (vendor+invoice text match, ignoring status/due filters)
+  // so tab counts reflect what's available within the current search
+  const data = src || allData;
+  const cnt={};data.forEach(r=>cnt[r.status]=(cnt[r.status]||0)+1);
+  document.getElementById('sc-all').textContent=data.length;
+  ['sc-paid','sc-pend','sc-open','sc-rej','sc-procore'].forEach((id,i)=>{
+    document.getElementById(id).textContent=cnt[['Paid In Full','Pending Approval','Open','Rejected','Procore Open'][i]]||0;
+  });
+  let ov=0,wk=0,th=0;
+  data.forEach(r=>{
+    if(r.status==='Open'||r.status==='Pending Approval'){
+      const d=r._days;if(d===null)return;
+      if(d<0)ov++;else if(d<=7)wk++;else if(d<=30)th++;
+    }
+  });
+  document.getElementById('sc-over').textContent=ov;
+  document.getElementById('sc-week').textContent=wk;
+  document.getElementById('sc-30').textContent=th;
+}
+
+// ── VENDOR TYPEAHEAD ──
+function onVendorType(val){
+  if(!val.trim()){closeVDrop();applyFilters();return;}
+  applyFilters();
+  const q=val.toLowerCase();
+  const uniq=[...new Set(allData.map(r=>r.vendor))].filter(v=>v.toLowerCase().includes(q)).slice(0,9);
+  const box=document.getElementById('vdrop');
+  if(!uniq.length){box.innerHTML='';box.classList.remove('open');return;}
+  box.innerHTML=uniq.map(v=>{
+    const inv=allData.filter(r=>r.vendor===v);
+    const paid=inv.filter(r=>r.status==='Paid In Full').length;
+    const pend=inv.filter(r=>r.status==='Pending Approval').length;
+    const open=inv.filter(r=>r.status==='Open').length;
+    const bdg=[];
+    if(paid)bdg.push(`<span class="mini-badge" style="background:var(--paid-bg);color:var(--paid-text)">✓ ${paid} paid</span>`);
+    if(pend)bdg.push(`<span class="mini-badge" style="background:var(--pending-bg);color:var(--pending-text)">⏳ ${pend} pending</span>`);
+    if(open)bdg.push(`<span class="mini-badge" style="background:var(--open-bg);color:var(--open-text)">◎ ${open} open</span>`);
+    return`<div class="vdrop-item" onmousedown="pickVendor('${e(v).replace(/'/g,"\\'")}')"><span class="vdi-name">${e(v)}</span><span class="vdi-badges">${bdg.join('')}</span></div>`;
+  }).join('');
+  box.classList.add('open');
+}
+function closeVDrop(){document.getElementById('vdrop').classList.remove('open');}
+function pickVendor(name){
+  document.getElementById('s-vendor').value=name;
+  closeVDrop();applyFilters();
+}
+
+// ── INVOICE TYPEAHEAD ──
+function onInvoiceType(val){
+  const box=document.getElementById('idrop');
+  if(!val.trim()){box.innerHTML='';box.classList.remove('open');applyFilters();return;}
+  applyFilters();
+  const q=val.toLowerCase();
+  const matches=allData.filter(r=>r.invoice.toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){box.innerHTML='';box.classList.remove('open');return;}
+  box.innerHTML=matches.map(r=>{
+    const dc=duecls(r),dl=duelbl(r);
+    return`<div class="idrop-item" onmousedown="pickInvoice('${e(r.invoice).replace(/'/g,"\\'")}')">
+      <div class="idrop-inv">${e(r.invoice)}</div>
+      <div class="idrop-vendor">${e(r.vendor)}</div>
+      ${r.memo?`<div class="idrop-memo">${e(r.memo)}</div>`:''}
+      <div class="idrop-meta">
+        <span class="status-pill ${pcls(r.status)}">${r.status}</span>
+        ${dl?`<span class="due-tag ${ptag(dc)}">${dl}</span>`:''}
+        <span style="font-size:11px;color:var(--muted)">${fmtM(r.amount)}</span>
+      </div>
+    </div>`;
+  }).join('');
+  box.classList.add('open');
+}
+function closeIDrop(){document.getElementById('idrop').classList.remove('open');}
+function pickInvoice(invoice){
+  document.getElementById('s-invoice').value=invoice;
+  closeIDrop();applyFilters();
+}
+
+// ── FILTER SETTERS ──
+function setStatus(btn,s){
+  activeStatus=s;activeDue='';
+  document.querySelectorAll('.ss-tab[data-s]').forEach(b=>b.classList.toggle('active',b.dataset.s===s));
+  document.querySelectorAll('.ss-tab[data-d]').forEach(b=>b.classList.remove('active'));
+  applyFilters();
+}
+function setDueTab(btn,d){
+  activeDue=activeDue===d?'':d;activeStatus='';
+  document.querySelectorAll('.ss-tab[data-d]').forEach(b=>b.classList.toggle('active',b.dataset.d===activeDue));
+  document.querySelectorAll('.ss-tab[data-s]').forEach(b=>b.classList.toggle('active',b.dataset.s===''));
+  applyFilters();
+}
+
+// ── APPLY FILTERS ──
+function applyFilters(){
+  const vq=(document.getElementById('s-vendor')?.value||'').toLowerCase().trim();
+  const iq=(document.getElementById('s-invoice')?.value||'').toLowerCase().trim();
+  const sub=document.getElementById('f-subsidiary').value;
+  const dept=document.getElementById('f-dept').value;
+  const period=document.getElementById('f-period').value;
+
+  // searchBase = text + subsidiary/dept/period only, NO status or due filter
+  // Tab counts reflect what is available within the current search
+  const searchBase=allData.filter(r=>{
+    if(vq&&!r.vendor.toLowerCase().includes(vq))return false;
+    if(iq&&!r.invoice.toLowerCase().includes(iq))return false;
+    if(sub&&r.subsidiary!==sub)return false;
+    if(dept&&!r.department.startsWith(dept))return false;
+    if(period&&r.period!==period)return false;
+    return true;
+  });
+  buildStatusCounts(searchBase);
+
+  // filteredData = searchBase further narrowed by status / due tabs
+  filteredData=searchBase.filter(r=>{
+    if(activeStatus&&r.status!==activeStatus)return false;
+    if(activeDue){
+      if(r.status!=='Open'&&r.status!=='Pending Approval')return false;
+      const d=r._days;
+      if(activeDue==='overdue'&&(d===null||d>=0))return false;
+      if(activeDue==='this_week'&&(d===null||d<0||d>7))return false;
+      if(activeDue==='next_30'&&(d===null||d<0||d>30))return false;
+    }
+    return true;
+  });
+  sortData();page=1;renderTable();renderKPIs();
+  const tot=filteredData.reduce((s,r)=>s+r.amount,0);
+  document.getElementById('tbl-count').innerHTML=
+    `<b>${filteredData.length.toLocaleString()}</b> invoice${filteredData.length!==1?'s':''}${filteredData.length>0?` &nbsp;·&nbsp; <b>${fmtM(tot)}</b> total`:''}`;
+
+  // Show results + KPIs only when a search/filter is active
+  const hasSearch = !!(
+    (document.getElementById('s-vendor')?.value||'').trim() ||
+    (document.getElementById('s-invoice')?.value||'').trim() ||
+    activeStatus || activeDue ||
+    document.getElementById('f-subsidiary').value ||
+    document.getElementById('f-dept').value ||
+    document.getElementById('f-period').value
+  );
+  document.getElementById('results-section').style.display = hasSearch ? 'block' : 'none';
+  document.getElementById('no-search-prompt').style.display = hasSearch ? 'none' : 'block';
+  document.getElementById('kpi-row').style.display = hasSearch ? 'grid' : 'none';
+  document.getElementById('clear-btn-row').style.display = hasSearch ? 'block' : 'none';
+}
+
+function clearAll(){
+  activeStatus='';activeDue='';
+  ['s-vendor','s-invoice'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); 
+  ['f-subsidiary','f-dept','f-period'].forEach(id=>document.getElementById(id).value='');
+  closeVDrop();closeIDrop();
+  document.querySelectorAll('.ss-tab[data-s]').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.querySelectorAll('.ss-tab[data-d]').forEach(b=>b.classList.remove('active'));
+  applyFilters();
+}
+
+// ── SORT ──
+function sortBy(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=col==='dueDate'?1:-1;}
+  document.querySelectorAll('.main-table th').forEach(t=>t.classList.remove('sorted'));
+  event.target.closest('th').classList.add('sorted');
+  sortData();renderTable();
+}
+function changeSortSel(v){const[c,d]=v.split('-');sortCol=c;sortDir=d==='desc'?-1:1;sortData();renderTable();}
+function sortData(){
+  filteredData.sort((a,b)=>{
+    let va=a[sortCol]||'',vb=b[sortCol]||'';
+    if(sortCol==='amount')return(va-vb)*sortDir;
+    if(sortCol==='date'||sortCol==='dueDate'){
+      const p=s=>{try{const[m,d,y]=s.split('/');return new Date(+y,+m-1,+d);}catch{return new Date(0);}};
+      if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return(p(va)-p(vb))*sortDir;
+    }
+    return va.toString().localeCompare(vb.toString())*sortDir;
+  });
+}
+
+// ── TABLE ──
+function renderTable(){
+  const body=document.getElementById('t-body'),emp=document.getElementById('empty');
+  const rows=filteredData.slice((page-1)*pageSize,page*pageSize);
+  if(!filteredData.length){body.innerHTML='';emp.style.display='block';}
+  else{
+    emp.style.display='none';
+    body.innerHTML=rows.map(r=>{
+      const dc=duecls(r),dl=duelbl(r);
+      return`<tr class="${r.isProcore?'row-procore':''}" onclick="filterToVendor('${e(r.vendor).replace(/'/g,"\\'")}')">
+        <td class="td-v">${e(r.vendor)}<small>${e(r.subsidiary)}</small></td>
+        <td class="td-mono">${e(r.invoice)}${r.isProcore?` <span title="Procore — not yet in NetSuite" style="font-size:10px;background:var(--procore-bg);color:var(--procore-text);padding:1px 5px;border-radius:3px;font-weight:700;margin-left:3px;">Procore</span>`:''}</td>
+        <td class="td-memo-cell" title="${e(r.memo)}">${e(r.memo)||'—'}</td>
+        <td class="td-d">${r.date}</td>
+        <td class="td-d">${r.dateClosed?`${r.dateClosed}<span style="display:inline-block;margin-left:5px;font-size:9px;font-weight:700;letter-spacing:.04em;background:#dcfce7;color:#15803d;padding:1px 5px;border-radius:3px;">PAID</span>` : `<span style="${dc==='is-overdue'?'color:var(--overdue);font-weight:600':dc==='is-soon'?'color:#b45309;font-weight:500':''}">${r.dueDate||'—'}${dl?`<span class="due-tag ${ptag(dc)}">${dl}</span>`:''}</span>`}</td>
+        <td class="td-d">${r.period}</td>
+        <td class="td-amt-r">${fmtM(r.amount)}</td>
+        <td><span class="status-pill ${pcls(r.status)}">${r.status}</span></td>
+      </tr>`;
+    }).join('');
+  }
+  renderPag();
+}
+
+// ── PAGINATION ──
+function renderPag(){
+  const total=filteredData.length,tp=Math.ceil(total/pageSize)||1;
+  const s=(page-1)*pageSize+1,end=Math.min(page*pageSize,total);
+  const btns=[];let lo=Math.max(1,page-2),hi=Math.min(tp,page+2);
+  if(lo>1){btns.push(`<button class="pb" onclick="goP(1)">1</button>`);if(lo>2)btns.push(`<span style="color:var(--light);padding:0 2px">…</span>`);}
+  for(let i=lo;i<=hi;i++)btns.push(`<button class="pb ${i===page?'active':''}" onclick="goP(${i})">${i}</button>`);
+  if(hi<tp){if(hi<tp-1)btns.push(`<span style="color:var(--light);padding:0 2px">…</span>`);btns.push(`<button class="pb" onclick="goP(${tp})">${tp}</button>`);}
+  document.getElementById('pag').innerHTML=`
+    <div class="pag-info">Showing ${total>0?s:0}–${end} of ${total.toLocaleString()}</div>
+    <div style="display:flex;align-items:center;gap:7px">
+      <div class="pag-btns"><button class="pb" onclick="goP(${page-1})" ${page===1?'disabled':''}>← Prev</button>${btns.join('')}<button class="pb" onclick="goP(${page+1})" ${page>=tp?'disabled':''}>Next →</button></div>
+      <select class="ctrl-sel" onchange="changePS(this.value)"><option value="25" ${pageSize===25?'selected':''}>25/pg</option><option value="50" ${pageSize===50?'selected':''}>50/pg</option><option value="100" ${pageSize===100?'selected':''}>100/pg</option><option value="9999" ${pageSize===9999?'selected':''}>All</option></select>
+    </div>`;
+}
+function goP(p){const t=Math.ceil(filteredData.length/pageSize)||1;page=Math.max(1,Math.min(p,t));renderTable();}
+function changePS(v){pageSize=parseInt(v);page=1;renderTable();}
+
+// ── KPIs ──
+function renderKPIs(data){
+  const src=data||filteredData;
+  const by={};src.forEach(r=>{if(!by[r.status])by[r.status]={c:0,a:0};by[r.status].c++;by[r.status].a+=r.amount;});
+  const tot=src.reduce((s,r)=>s+r.amount,0);
+  const allCard=`<div class="kpi all-kpi ${activeStatus===''&&activeDue===''?'kpi-active':''}" onclick="kpiClick('__ALL__')">
+    <div class="kpi-lbl">All</div><div class="kpi-val">${fmtM(tot)}</div>
+    <div class="kpi-sub"><b>${src.length}</b> invoice${src.length!==1?'s':''}</div>
+  </div>`;
+  const cards=[
+    {k:'Paid In Full',cls:'paid'},{k:'Pending Approval',cls:'pending'},{k:'Open',cls:'open'},{k:'Rejected',cls:'rejected'},{k:'Procore Open',cls:'procore'}
+  ].map(({k,cls})=>{const d=by[k]||{c:0,a:0};return`<div class="kpi ${cls} ${activeStatus===k?'kpi-active':''}" onclick="kpiClick('${k}')">
+    <div class="kpi-lbl">${k}</div><div class="kpi-val">${fmtM(d.a)}</div>
+    <div class="kpi-sub"><b>${d.c}</b> invoice${d.c!==1?'s':''}</div>
+  </div>`;}).join('');
+  document.getElementById('kpi-row').innerHTML=allCard+cards;
+}
+function kpiClick(status){
+  if(status==='__ALL__'){activeStatus='';activeDue='';}
+  else{activeStatus=activeStatus===status?'':status;activeDue='';}
+  document.querySelectorAll('.ss-tab[data-s]').forEach(b=>b.classList.toggle('active',b.dataset.s===(activeStatus||'')));
+  document.querySelectorAll('.ss-tab[data-d]').forEach(b=>b.classList.remove('active'));
+  renderKPIs();applyFilters();
+}
+
+// ── EXPORT ──
+function exportCSV(){
+  const h=['Subsidiary','Vendor','Invoice #','Memo','Date','Due Date','Period','Department','Amount','Status'];
+  const rows=filteredData.map(r=>[r.subsidiary,r.vendor,r.invoice,r.memo,r.date,r.dueDate,r.period,r.department,r.amount,r.status].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'}));
+  a.download=`nexus_invoices_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ── HELPERS ──
+function duecls(r){if(r.status==='Paid In Full'||r.status==='Rejected')return'is-ok';const d=r._days;if(d===null)return'is-ok';if(d<0)return'is-overdue';if(d<=7)return'is-soon';return'is-ok';}
+function duelbl(r){if(r.status==='Paid In Full'||r.status==='Rejected')return'';const d=r._days;if(d===null)return'';if(d<0)return`${Math.abs(d)}d overdue`;if(d===0)return'Due today';if(d<=7)return`Due in ${d}d`;if(d<=30)return`Due in ${d}d`;return'';}
+function ptag(c){if(c==='is-overdue')return'overdue';if(c==='is-soon')return'soon';return'';}
+function pcls(s){return{'Paid In Full':'p-paid','Pending Approval':'p-pend','Open':'p-open','Rejected':'p-rej','Procore Open':'p-procore'}[s]||'';}
+function fmtM(n){if(!n)return'$0.00';if(n>=1e9)return'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return'$'+(n/1e6).toFixed(2)+'M';return'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function filterToVendor(name){
+  document.getElementById('s-vendor').value=name;
+  applyFilters();
+}
+
+// ── NAME SCRUBBING — strip individual first names from memos for privacy ──
+const SCRUB_NAMES = [
+  /\bHollee\b/gi, /\bRob\b(?=\s|,|\.|-|$)/gi, /\bSheri\b/gi,
+  /\bby\s+[A-Z][a-z]+\b/g,         // "by FirstName"
+  /\bfrom\s+[A-Z][a-z]+\b/g,        // "from FirstName"
+  /\bsubmitted by\s+[A-Z][a-z]+/gi,
+  /\(Inv date = Procore Submis\.\.\.\)/gi,
+];
+function scrubMemo(memo){
+  let s=memo||'';
+  SCRUB_NAMES.forEach(rx=>{ s=s.replace(rx,'').trim(); });
+  return s.replace(/\s{2,}/g,' ').replace(/[-–]\s*$/,'').trim();
+}
+
+// ── PAYMENT INFO TOGGLE — removed (always open now) ──
+
+// ── DOWNLOAD UPDATED PORTAL ──
+
+// ── LIVE DATA SOURCE ──────────────────────────────────────────────
+// Reads invoices.csv sitting next to this page. To refresh for everyone,
+// replace invoices.csv in the repo — the URL never changes.
+const DATA_URL='invoices.csv';
+function setBanner(msg,kind){
+  let b=document.getElementById('load-banner');
+  if(!b){
+    b=document.createElement('div');b.id='load-banner';
+    b.style.cssText='padding:9px 28px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);';
+    document.querySelector('header').insertAdjacentElement('afterend',b);
+  }
+  const ok=kind==='ok';
+  b.style.background=ok?'#f0fdf4':'#fef2f2';
+  b.style.color=ok?'var(--paid-text)':'var(--rejected-text)';
+  b.textContent=msg;
+  if(ok){clearTimeout(window.__bt);window.__bt=setTimeout(()=>b.remove(),4000);}
+}
+function loadData(){
+  fetch(DATA_URL+'?t='+Date.now(),{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+    .then(txt=>{
+      const parsed=parseCSV(txt.replace(/\r\n/g,'\n'));
+      allData=parsed.map(r=>({...r,_days:ddays(r)}));
+      document.getElementById('update-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      buildDropdowns();buildStatusCounts();applyFilters();
+      setBanner('\u2713 Loaded '+allData.length+' invoices from invoices.csv',(allData.length?'ok':'err'));
+    })
+    .catch(err=>{
+      allData=[];buildDropdowns();buildStatusCounts();applyFilters();
+      setBanner('\u2717 Could not load invoices.csv ('+err.message+'). If you opened this file by double-clicking it, it must be viewed from its hosted URL. You can also unlock admin below and upload a CSV to preview locally.','err');
+      // reveal the local-preview uploader as a fallback
+      adminUnlocked=true;
+      document.getElementById('admin-bar').classList.add('active');
+      const ka=document.getElementById('admin-key-area'); if(ka) ka.style.display='none';
+    });
+}
+loadData();
+</script>
+</body>
+</html>
