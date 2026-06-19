@@ -202,7 +202,6 @@ header{height:var(--header-h);background:var(--white);border-bottom:1px solid va
 @media(max-width:880px){}
 @media(max-width:660px){.page{flex-direction:column;}header{padding:0 14px;}.search-bar{padding:12px 14px;}.kpi-row{grid-template-columns:repeat(2,1fr);}.pay-info{padding:0 14px;}}
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -228,8 +227,8 @@ header{height:var(--header-h);background:var(--white);border-bottom:1px solid va
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Preview a File
     </label>
-    <input type="file" id="csv-upload" accept=".csv,.xlsx,.xls" onchange="handleCSVUpload(this)"/>
-    <span id="upload-status">Preview a CSV/Excel locally (does not change the shared data)</span>
+    <input type="file" id="csv-upload" accept=".csv" onchange="handleCSVUpload(this)"/>
+    <span id="upload-status">Preview a CSV locally (does not change the shared data)</span>
     <span class="upload-hint">Local preview only · To update for everyone, replace invoices.csv in the repo</span>
   </div>
 </div>
@@ -442,34 +441,19 @@ document.getElementById('admin-key-input').addEventListener('keydown',ev=>{if(ev
 function handleCSVUpload(inp){
   if(!adminUnlocked)return;
   const file=inp.files[0];if(!file)return;
-  const s=document.getElementById('upload-status');s.textContent='Parsing\u2026';s.className='';
-  const name=(file.name||'').toLowerCase();
-  const isExcel=name.endsWith('.xlsx')||name.endsWith('.xls');
-  const ingest=(csvText)=>{
+  const s=document.getElementById('upload-status');s.textContent='Parsing…';s.className='';
+  const fr=new FileReader();
+  fr.onload=ev=>{
     try{
-      const parsed=parseCSV(csvText);
+      const parsed=parseCSV(ev.target.result);
       if(!parsed.length)throw new Error('No records found');
       allData=parsed.map(r=>({...r,_days:ddays(r)}));
       document.getElementById('update-date').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
       buildDropdowns();buildStatusCounts();clearAll();
-      s.textContent=`\u2713 ${parsed.length} invoices loaded from ${file.name}`;s.className='ok';
-    }catch(err){s.textContent=`\u2717 Error: ${err.message}`;s.className='err';}
+      s.textContent=`✓ ${parsed.length} invoices loaded from ${file.name}`;s.className='ok';
+    }catch(err){s.textContent=`✗ Error: ${err.message}`;s.className='err';}
   };
-  const fr=new FileReader();
-  if(isExcel){
-    if(typeof XLSX==='undefined'){s.textContent='\u2717 Excel reader unavailable (offline / blocked). Export the sheet as CSV and upload that instead.';s.className='err';return;}
-    fr.onload=ev=>{
-      try{
-        const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        ingest(XLSX.utils.sheet_to_csv(ws));
-      }catch(err){s.textContent=`\u2717 Error reading Excel: ${err.message}`;s.className='err';}
-    };
-    fr.readAsArrayBuffer(file);
-  }else{
-    fr.onload=ev=>ingest(ev.target.result);
-    fr.readAsText(file);
-  }
+  fr.readAsText(file);
 }
 function parseCSV(txt){
   const lines=txt.split('\n').filter(l=>l.trim());if(lines.length<2)throw new Error('File is empty');
@@ -526,9 +510,14 @@ function normVendor(name){return VENDOR_MAP[name.toLowerCase().trim()]||name.tri
 
 function normPeriod(p){
   if(!p)return'';
-  const m=p.trim().match(/^([A-Za-z]{3})-(\d{2})$/);
-  if(m){const yr=parseInt(m[2]);return m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()+' '+(yr<50?'20':'19')+m[2];}
-  return p.trim();
+  p=p.trim();
+  let mon,yy,m;
+  m=p.match(/^([A-Za-z]{3})-(\d{2})$/);            // Mar-25
+  if(m){mon=m[1];yy=m[2];}
+  else{m=p.match(/^(\d{2})-([A-Za-z]{3})$/);        // 25-Mar
+    if(m){yy=m[1];mon=m[2];}}
+  if(mon&&yy){const yr=parseInt(yy);return mon.charAt(0).toUpperCase()+mon.slice(1).toLowerCase()+' '+(yr<50?'20':'19')+yy;}
+  return p;
 }
 function parseCSVLine(l){
   const r=[];let c='',q=false;
@@ -829,18 +818,14 @@ function scrubMemo(memo){
 // ── PAYMENT INFO TOGGLE — removed (always open now) ──
 
 // ── DOWNLOAD UPDATED PORTAL ──
-
-// ── LIVE DATA SOURCE ──────────────────────────────────────────────
-// Reads invoices.csv sitting next to this page. To refresh for everyone,
-// replace invoices.csv in the repo — the URL never changes.
+// ── LIVE DATA SOURCE: reads invoices.csv sitting next to this page ──
+// To refresh for everyone, replace invoices.csv in the repo — the URL never changes.
 const DATA_URL='invoices.csv';
 function setBanner(msg,kind){
   let b=document.getElementById('load-banner');
-  if(!b){
-    b=document.createElement('div');b.id='load-banner';
+  if(!b){b=document.createElement('div');b.id='load-banner';
     b.style.cssText='padding:9px 28px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);';
-    document.querySelector('header').insertAdjacentElement('afterend',b);
-  }
+    document.querySelector('header').insertAdjacentElement('afterend',b);}
   const ok=kind==='ok';
   b.style.background=ok?'#f0fdf4':'#fef2f2';
   b.style.color=ok?'var(--paid-text)':'var(--rejected-text)';
@@ -859,8 +844,7 @@ function loadData(){
     })
     .catch(err=>{
       allData=[];buildDropdowns();buildStatusCounts();applyFilters();
-      setBanner('\u2717 Could not load invoices.csv ('+err.message+'). If you opened this file by double-clicking it, it must be viewed from its hosted URL. You can also unlock admin below and upload a CSV to preview locally.','err');
-      // reveal the local-preview uploader as a fallback
+      setBanner('\u2717 Could not load invoices.csv ('+err.message+'). If you opened this file by double-clicking it, view it from its hosted URL instead. You can also unlock admin below and upload a CSV to preview.','err');
       adminUnlocked=true;
       document.getElementById('admin-bar').classList.add('active');
       const ka=document.getElementById('admin-key-area'); if(ka) ka.style.display='none';
